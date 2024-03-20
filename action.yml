@@ -1,7 +1,9 @@
 name: Deploy to Stackhero
-# run-name: Deploy branch ${{ github.ref_name }} to Stackhero
 description: Deploy your code to a Stackhero instance
 
+branding:
+  icon: upload-cloud
+  color: blue
 
 inputs:
   ssh_private_key:
