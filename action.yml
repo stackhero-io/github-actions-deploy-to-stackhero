@@ -1,0 +1,63 @@
+name: Deploy to Stackhero
+# run-name: Deploy branch ${{ github.ref_name }} to Stackhero
+description: Deploy your code to a Stackhero instance
+
+
+inputs:
+  ssh_private_key:
+    description: 'Your SSH private key'
+    required: true
+
+  endpoint:
+    description: 'Endpoint of your instance (xxxxxx.stackhero-network.com or your customized domain)'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Check inputs
+      shell: bash
+      run: |
+        error=0
+
+        if [ "${{ inputs.ssh_private_key }}" = "" ]
+        then
+          echo "::error::The \"ssh_private_key\" argument should be passed to this action."
+          error=1
+        fi
+
+        if [ "${{ inputs.endpoint }}" = "" ]
+        then
+          echo "::error::The \"endpoint\" argument should be passed to this action."
+          error=1
+        fi
+
+        if [ "$error" == 1 ]
+        then
+          exit 1
+        fi
+
+    - name: Configure SSH
+      shell: bash
+      run: |
+        install -m 600 -D /dev/null ~/.ssh/private_key
+        echo "${{ inputs.ssh_private_key }}" > ~/.ssh/private_key
+        git config --local --add core.sshCommand 'ssh -i ~/.ssh/private_key'
+
+        ssh-keyscan -p 222 ${{ inputs.endpoint }} > ~/.ssh/known_hosts
+
+    - name: Configure GIT
+      shell: bash
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub actions"
+
+    - name: Deploy
+      shell: bash
+      run: |
+        git fetch --unshallow origin
+        git remote add stackhero ssh://stackhero@${{ inputs.endpoint }}:222/project.git
+
+        git push -f stackhero ${{ github.ref_name }}:main
